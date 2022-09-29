@@ -1,17 +1,13 @@
 import pygame
 import os
 from math import ceil
-from itertools import count
 from random import randint
+from itertools import count
 
 pygame.font.init()
 pygame.mixer.init()
 WIDTH = 1000
 HEIGHT = 500
-
-
-
-#BORDER = pygame.Rect(WIDTH // 2 - 5, 0, 2, HEIGHT)
 
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
@@ -25,18 +21,15 @@ text_colour = (255, 255, 255)
 
 friendly_actor_count_font = pygame.font.SysFont('Engravers MT', 30)
 
-WINNER_FONT = pygame.font.SysFont('comicsans', 100)
-
 FPS = 60
-
 
 class Actors():
     _ids = count(0)
 
-    def __init__(self, actor_type, faction):
+    def __init__(self, actor_type, faction, id_modifier):
         self.actor_type = actor_type
         self.get_actor_stats()
-        self.id = next(self._ids) - game_instance.id_modifier
+        self.id = next(self._ids) - id_modifier
         self.position = []
         self.state = 1
         self.faction = faction
@@ -63,6 +56,7 @@ class Actors():
                 "health": 6,
                 "initiative": randint(4, 5)}
 
+
 class Game():
     def __init__(self):
         self.width, self.height = WIDTH, HEIGHT
@@ -73,18 +67,19 @@ class Game():
 
     def generate_scenario(self):
         enemy_actor_count = randint(5,
-                                    20)
-        friendly_actor_count = randint(5, 20)
+                                    300)
+        friendly_actor_count = randint(5, 300)
+        tile_count_x = randint(int((enemy_actor_count + friendly_actor_count) / 2), int(((enemy_actor_count + friendly_actor_count) / 2) * 1.5))
         print(f"New enemy count = {enemy_actor_count}")
         print(f"Friendly actor count = {friendly_actor_count}")
         if enemy_actor_count > friendly_actor_count:
             lives = ceil(1.1 * (abs(enemy_actor_count - friendly_actor_count)))
         else:
             try:
-                lives = int(enemy_actor_count / (abs(enemy_actor_count - friendly_actor_count)))
+                lives = ceil(0.2 * ((enemy_actor_count)))
             except ZeroDivisionError:
                 lives = ceil(enemy_actor_count/3)
-        scenario = Scenario(enemy_actor_count, friendly_actor_count, lives)
+        scenario = Scenario(enemy_actor_count, friendly_actor_count, lives, tile_count_x)
         return scenario
 
     def generate_interface(self):
@@ -176,7 +171,7 @@ class Game():
                     self.interface.lock_interface = False
                     self.scenario.scenario_running = False
 
-                elif game_speed_timer > 30:
+                elif game_speed_timer > 10:
                     game_speed_timer = 0
                     self.scenario.process_move()
 
@@ -187,9 +182,9 @@ class Game():
 
 
 class Scenario():
-    def __init__(self, enemy_actor_count, friendly_actor_count, lives):
+    def __init__(self, enemy_actor_count, friendly_actor_count, lives, tile_count_x):
         self.scenario_running = False
-        self.tile_count_x = 20 + 4
+        self.tile_count_x = tile_count_x
         self.tile_count_y = int(self.tile_count_x * (game_instance.height/game_instance.width))
         self.tile_size_x = game_instance.width / self.tile_count_x
         self.tile_size_y = game_instance.height / self.tile_count_y
@@ -206,7 +201,7 @@ class Scenario():
     def generate_actor(self, faction):
         actor_type = "standard"
         #actor_stats = get_actor_stats(actor_type)
-        actor = Actors(actor_type, faction)
+        actor = Actors(actor_type, faction, game_instance.id_modifier)
         return actor
 
     def generate_actor_list(self, count, faction):
@@ -217,7 +212,6 @@ class Scenario():
             actor = self.generate_actor(faction)
             # append to actor_list
             generated_actors.append(actor)
-
         return generated_actors
 
     def deploy_actors(self, actors):
@@ -326,18 +320,18 @@ class Scenario():
 
                     # if actor in the way
                     if invalid_move:
-                        print(f"movement blocked ", end="")
+                        #print(f"movement blocked ", end="")
 
                         # check for enemy
-                        print(f"Full actor list = {len(self.full_actor_list)}")
-                        print(f"Actor assessed = {blocking_actor}")
+                        #print(f"Full actor list = {len(self.full_actor_list)}")
+                        #print(f"Actor assessed = {blocking_actor}")
                         if self.check_for_enemy(actor.faction, self.full_actor_list[blocking_actor].faction):
-                            print(f"by enemy, attacking!")
+                            #print(f"by enemy, attacking!")
                             self.run_encounter([actor, self.full_actor_list[blocking_actor]])
                             action_found = True
 
                         else:
-                            print("by ally, staying put")
+                            #print("by ally, staying put")
                             action_found = True
 
                         new_position = [actor.position[0], actor.position[1]]
@@ -345,7 +339,7 @@ class Scenario():
                     # if no obstruction
                     else:
                         if self.check_for_edge_of_board(new_position):
-                            print("life lost!")
+                            #print("life lost!")
                             actor.state = 2
                             self.lives -= 1
                             if actor.faction == "enemy":
@@ -380,28 +374,24 @@ class Scenario():
 
     def run_encounter(self, actors):
         # run an encounter
-        print(
-            f"Running encounter between {actors[0].faction} actor {actors[0].id} and {actors[1].faction} actor {actors[1].id}")
+        #print(f"Running encounter between {actors[0].faction} actor {actors[0].id} and {actors[1].faction} actor {actors[1].id}")
 
         # perform initiative roll
         actors = self.initiative_roll(actors)
-        for actor in actors:
-            print(f"{actor.faction} actor {actor.id} attacks with initiative {actor.initiative}")
 
         for actor in actors:
             for target in actors:
                 if target.id != actor.id:
                     target_actor = target
-            print(f"{actor.faction} actor {actor.id} rolling for a hit...")
+            #print(f"{actor.faction} actor {actor.id} rolling for a hit...")
             if self.roll_for_hit(actor.skill, target_actor.skill):
-                print(f"Rolling for damage...")
+                #print(f"Rolling for damage...")
                 damage = randint(1, actor.damage)
-                print(f"{damage} damage dealt!")
-                print(
-                    f"{target_actor.faction} actor {target_actor.id} health drops from {target_actor.health} to {target_actor.health - damage}")
+                #print(f"{damage} damage dealt!")
+                #print(f"{target_actor.faction} actor {target_actor.id} health drops from {target_actor.health} to {target_actor.health - damage}")
                 target_actor.health -= damage
                 if target_actor.health <= 0:
-                    print(f"Actor killed!")
+                    #print(f"Actor killed!")
                     target_actor.state = 0
                     if target_actor.faction == "enemy":
                         self.enemy_actor_count -= 1
@@ -436,12 +426,13 @@ class Scenario():
         threshold = 10 + enemy_modifier
         for i in range(modifier):
             dice_roll = randint(0, 20)
-            print(f"Dice roll {i + 1} result...... {dice_roll} / {threshold}")
+            #print(f"Dice roll {i + 1} result...... {dice_roll} / {threshold}")
             if dice_roll > threshold:
-                print(f"Hit!")
+                #print(f"Hit!")
                 return True
             else:
-                print(f"Miss!")
+                pass
+                #print(f"Miss!")
         return False
 
 
